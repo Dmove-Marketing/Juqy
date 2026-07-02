@@ -12,5 +12,7 @@ if (!server) {
 }
 
 const dest = `${user}@${server}:${remote_path}`;
+console.log(`Limpando _astro/ antigo em ${dest}`);
+execSync(`ssh ${user}@${server} "rm -rf ${remote_path}_astro"`, { stdio: "inherit" });
 console.log(`Enviando dist/ → ${dest}`);
 execSync(`scp -r dist/* ${dest}`, { stdio: "inherit" });
