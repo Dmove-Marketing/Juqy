@@ -1,0 +1,146 @@
+---
+// src/components/ui/Testimonials.astro
+// Grid de depoimentos com avatar, nome, cargo e texto
+// Uso: <Testimonials items={[{ name: "...", role: "...", text: "...", avatar: "/images/..." }]} />
+
+interface Props {
+  items: Array<{
+    name: string;
+    role?: string;
+    text: string;
+    avatar?: string;
+    stars?: number;
+  }>;
+  columns?: 2 | 3;
+  class?: string;
+}
+
+const {
+  items,
+  columns = 3,
+  class: className,
+} = Astro.props;
+---
+
+<div class:list={['testimonials-grid', `testimonials-cols-${columns}`, className]}>
+  {items.map((item) => (
+    <div class="testimonial-card glass" data-animate="fade-up">
+      {item.stars && (
+        <div class="testimonial-stars">
+          {Array.from({ length: item.stars }).map(() => (
+            <span class="star">★</span>
+          ))}
+        </div>
+      )}
+      <blockquote class="testimonial-text">
+        <p>"{item.text}"</p>
+      </blockquote>
+      <div class="testimonial-author">
+        {item.avatar ? (
+          <img src={item.avatar} alt={item.name} class="testimonial-avatar" loading="lazy" />
+        ) : (
+          <div class="testimonial-avatar-placeholder">
+            {item.name.charAt(0).toUpperCase()}
+          </div>
+        )}
+        <div class="testimonial-info">
+          <span class="testimonial-name">{item.name}</span>
+          {item.role && <span class="testimonial-role">{item.role}</span>}
+        </div>
+      </div>
+    </div>
+  ))}
+</div>
+
+<style>
+  .testimonials-grid {
+    display: grid;
+    gap: var(--space-lg);
+  }
+
+  .testimonials-cols-2 { grid-template-columns: repeat(2, 1fr); }
+  .testimonials-cols-3 { grid-template-columns: repeat(3, 1fr); }
+
+  .testimonial-card {
+    padding: var(--space-xl);
+    border-radius: var(--radius-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    transition: all var(--transition-normal);
+  }
+
+  .testimonial-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(255, 255, 255, 0.12);
+  }
+
+  .testimonial-stars {
+    display: flex;
+    gap: 2px;
+  }
+
+  .star {
+    color: #fbbf24;
+    font-size: 1rem;
+  }
+
+  .testimonial-text p {
+    font-size: 0.95rem;
+    line-height: 1.7;
+    color: var(--text-secondary);
+    font-style: italic;
+  }
+
+  .testimonial-author {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    margin-top: auto;
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--glass-border);
+  }
+
+  .testimonial-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .testimonial-avatar-placeholder {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--gradient-primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.1rem;
+  }
+
+  .testimonial-info {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .testimonial-name {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+  }
+
+  .testimonial-role {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  @media (max-width: 768px) {
+    .testimonials-cols-2,
+    .testimonials-cols-3 {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

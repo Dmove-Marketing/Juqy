@@ -1,0 +1,126 @@
+---
+// src/components/ui/CookieConsent.astro
+// Banner de consentimento LGPD — salva preferência em localStorage
+// Uso: <CookieConsent />
+
+interface Props {
+  message?: string;
+  buttonText?: string;
+  learnMoreUrl?: string;
+  learnMoreText?: string;
+  class?: string;
+}
+
+const {
+  message = 'Este site utiliza cookies para melhorar sua experiência. Ao continuar navegando, você concorda com nossa Política de Privacidade.',
+  buttonText = 'Aceitar',
+  learnMoreUrl = '#',
+  learnMoreText = 'Saiba mais',
+  class: className,
+} = Astro.props;
+---
+
+<div class:list={['cookie-consent', className]} data-cookie-consent hidden>
+  <div class="cookie-content">
+    <p class="cookie-text">
+      🍪 {message}
+      {learnMoreUrl !== '#' && (
+        <a href={learnMoreUrl} class="cookie-link" target="_blank" rel="noopener">{learnMoreText}</a>
+      )}
+    </p>
+    <button class="btn btn-primary cookie-accept">{buttonText}</button>
+  </div>
+</div>
+
+<script>
+  function initCookieConsent() {
+    const banner = document.querySelector('[data-cookie-consent]') as HTMLElement;
+    if (!banner) return;
+
+    // Já aceitou
+    if (localStorage.getItem('cookie_consent') === 'accepted') return;
+
+    // Mostrar após 1.5s
+    setTimeout(() => {
+      banner.hidden = false;
+      requestAnimationFrame(() => banner.classList.add('cookie-visible'));
+    }, 1500);
+
+    const acceptBtn = banner.querySelector('.cookie-accept');
+    acceptBtn?.addEventListener('click', () => {
+      localStorage.setItem('cookie_consent', 'accepted');
+      banner.classList.remove('cookie-visible');
+      setTimeout(() => { banner.hidden = true; }, 400);
+
+      (window as any).dataLayer?.push({
+        event: 'cookie_consent',
+        consent_status: 'accepted',
+      });
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initCookieConsent);
+  } else {
+    initCookieConsent();
+  }
+</script>
+
+<style>
+  .cookie-consent {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 9999;
+    padding: var(--space-md) var(--space-lg);
+    background: var(--bg-card);
+    border-top: 1px solid var(--glass-border);
+    backdrop-filter: blur(20px);
+    transform: translateY(100%);
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .cookie-consent.cookie-visible {
+    transform: translateY(0);
+  }
+
+  .cookie-content {
+    max-width: var(--container-max);
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-lg);
+  }
+
+  .cookie-text {
+    font-size: 0.85rem;
+    color: var(--text-secondary) !important;
+    line-height: 1.5;
+    flex: 1;
+  }
+
+  .cookie-link {
+    color: var(--color-primary-light) !important;
+    text-decoration: underline;
+    margin-left: 4px;
+  }
+
+  .cookie-accept {
+    flex-shrink: 0;
+    padding: 10px 24px;
+    font-size: 0.9rem;
+  }
+
+  @media (max-width: 768px) {
+    .cookie-content {
+      flex-direction: column;
+      text-align: center;
+      gap: var(--space-md);
+    }
+    .cookie-accept {
+      width: 100%;
+    }
+  }
+</style>

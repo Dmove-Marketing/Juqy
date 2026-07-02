@@ -1,0 +1,155 @@
+---
+// src/components/ui/Accordion.astro
+// FAQ / Accordion expansível com animação suave
+// Uso: <Accordion items={[{ question: "...", answer: "..." }]} />
+
+interface Props {
+  items: Array<{
+    question: string;
+    answer: string;
+  }>;
+  allowMultiple?: boolean;
+  class?: string;
+}
+
+const {
+  items,
+  allowMultiple = false,
+  class: className,
+} = Astro.props;
+---
+
+<div class:list={['accordion', className]} data-allow-multiple={allowMultiple}>
+  {items.map((item, index) => (
+    <div class="accordion-item" data-accordion-item>
+      <button class="accordion-trigger" aria-expanded="false" aria-controls={`accordion-panel-${index}`}>
+        <span class="accordion-question">{item.question}</span>
+        <svg class="accordion-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+      <div class="accordion-panel" id={`accordion-panel-${index}`} role="region" hidden>
+        <div class="accordion-content">
+          <p set:html={item.answer} />
+        </div>
+      </div>
+    </div>
+  ))}
+</div>
+
+<script>
+  function initAccordions() {
+    document.querySelectorAll('.accordion').forEach(accordion => {
+      const allowMultiple = accordion.getAttribute('data-allow-multiple') === 'true';
+      const triggers = accordion.querySelectorAll('.accordion-trigger');
+
+      triggers.forEach(triggerEl => {
+        const trigger = triggerEl as HTMLButtonElement;
+        trigger.addEventListener('click', () => {
+          const isOpen = trigger.getAttribute('aria-expanded') === 'true';
+          const panel = trigger.nextElementSibling as HTMLElement;
+
+          if (!allowMultiple) {
+            // Fecha todos os outros
+            triggers.forEach(t => {
+              if (t !== trigger) {
+                t.setAttribute('aria-expanded', 'false');
+                const p = t.nextElementSibling as HTMLElement;
+                if (p) {
+                  p.hidden = true;
+                  p.style.maxHeight = '0';
+                }
+              }
+            });
+          }
+
+          if (isOpen) {
+            trigger.setAttribute('aria-expanded', 'false');
+            panel.style.maxHeight = '0';
+            setTimeout(() => { panel.hidden = true; }, 300);
+          } else {
+            trigger.setAttribute('aria-expanded', 'true');
+            panel.hidden = false;
+            panel.style.maxHeight = panel.scrollHeight + 'px';
+          }
+        });
+      });
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAccordions);
+  } else {
+    initAccordions();
+  }
+</script>
+
+<style>
+  .accordion {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    width: 100%;
+    max-width: 760px;
+  }
+
+  .accordion-item {
+    background: var(--bg-card);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    transition: border-color var(--transition-fast);
+  }
+
+  .accordion-item:has([aria-expanded="true"]) {
+    border-color: rgba(99, 102, 241, 0.3);
+  }
+
+  .accordion-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: var(--space-lg) var(--space-xl);
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    color: var(--text-primary);
+    font-size: 1rem;
+    font-weight: 500;
+    gap: var(--space-md);
+    transition: color var(--transition-fast);
+  }
+
+  .accordion-trigger:hover {
+    color: var(--color-primary-light);
+  }
+
+  .accordion-chevron {
+    flex-shrink: 0;
+    transition: transform 0.3s ease;
+    color: var(--text-muted);
+  }
+
+  [aria-expanded="true"] .accordion-chevron {
+    transform: rotate(180deg);
+    color: var(--color-primary);
+  }
+
+  .accordion-panel {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+  }
+
+  .accordion-content {
+    padding: 0 var(--space-xl) var(--space-lg);
+  }
+
+  .accordion-content p {
+    font-size: 0.95rem;
+    line-height: 1.7;
+    color: var(--text-secondary);
+  }
+</style>

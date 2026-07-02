@@ -1,0 +1,113 @@
+---
+// src/layouts/Base.astro
+import '../styles/global.css';
+import GTMHead from '../components/tracking/GTMHead.astro';
+import GTMBody from '../components/tracking/GTMBody.astro';
+import UTMCapture from '../components/tracking/UTMCapture.astro';
+import WhatsAppPopup from '../components/ui/WhatsAppPopup.astro';
+
+interface Props {
+  title: string;
+  description?: string;
+  ogImage?: string;
+  canonical?: string;
+  noIndex?: boolean;
+  theme?: 'dark' | 'light';
+  jsonLd?: Record<string, any>;
+  /** Sobrescreve o form_name enviado ao n8n pelo popup de WhatsApp desta página */
+  whatsappFormId?: string;
+}
+
+const {
+  title,
+  description = '',
+  ogImage = '/images/og-default.jpg',
+  canonical,
+  noIndex = false,
+  theme = 'dark',
+  jsonLd,
+  whatsappFormId,
+} = Astro.props;
+
+import config from '../../config.json';
+const gtmId          = config.tracking?.gtm_id || '';
+const trackingEnabled = config.tracking?.enabled !== false;
+
+const wapCfg      = (config as any).whatsapp_popup;
+const wapPhone    = wapCfg?.phone || '';
+const wapFormId   = whatsappFormId || wapCfg?.form_id || 'whats-popup';
+const wapDelay    = wapCfg?.show_after_ms ?? 3000;
+const wapWebhook  = (config as any).forms?.['lead-form']?.webhooks?.[0] || '';
+
+const defaultJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebPage',
+  name: title,
+  description: description,
+  url: canonical || Astro.url.href,
+};
+---
+
+<!doctype html>
+<html lang="pt-BR" data-theme={theme}>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+
+    <!-- SEO -->
+    <title>{title}</title>
+    {description && <meta name="description" content={description} />}
+    {canonical && <link rel="canonical" href={canonical} />}
+    {noIndex && <meta name="robots" content="noindex, nofollow" />}
+
+    <!-- Open Graph -->
+    <meta property="og:title" content={title} />
+    {description && <meta property="og:description" content={description} />}
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="pt_BR" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <!-- Fonts — Inter (ajustar por projeto) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- GTM Head -->
+    {trackingEnabled && gtmId && <GTMHead gtmId={gtmId} />}
+
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd || defaultJsonLd)} />
+
+    <slot name="head" />
+  </head>
+  <body>
+    <!-- GTM Body noscript -->
+    {trackingEnabled && gtmId && <GTMBody gtmId={gtmId} />}
+
+    <!-- UTM Capture -->
+    {trackingEnabled && <UTMCapture />}
+
+    <!-- Conteúdo da página -->
+    <slot />
+
+    <!-- WhatsApp Popup (padrão em todas as páginas — configure phone em config.json) -->
+    {wapPhone && (
+      <WhatsAppPopup
+        phone={wapPhone}
+        formId={wapFormId}
+        submitUrl={wapWebhook}
+        showAfterMs={wapDelay}
+      />
+    )}
+
+    <!-- Scripts adicionais -->
+    <slot name="scripts" />
+  </body>
+</html>

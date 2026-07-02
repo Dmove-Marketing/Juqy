@@ -1,0 +1,212 @@
+---
+// src/components/ui/Modal.astro
+// Popup/Modal com múltiplos triggers: click, timer, scroll, exit-intent
+// Uso: <Modal triggerId="btn-open" triggerType="click">...conteúdo...</Modal>
+// Uso timer: <Modal triggerType="timer" triggerDelay={5000}>...</Modal>
+// Uso scroll: <Modal triggerType="scroll" triggerScroll={50}>...</Modal>
+// Uso exit: <Modal triggerType="exit-intent">...</Modal>
+
+interface Props {
+  triggerId?: string;
+  triggerType?: 'click' | 'timer' | 'scroll' | 'exit-intent';
+  triggerDelay?: number;
+  triggerScroll?: number;
+  showOnce?: boolean;
+  storageKey?: string;
+  class?: string;
+}
+
+const {
+  triggerId,
+  triggerType = 'click',
+  triggerDelay = 5000,
+  triggerScroll = 50,
+  showOnce = true,
+  storageKey = 'modal_shown',
+  class: className,
+} = Astro.props;
+---
+
+<div
+  class:list={['modal-overlay', className]}
+  data-trigger-type={triggerType}
+  data-trigger-id={triggerId}
+  data-trigger-delay={triggerDelay}
+  data-trigger-scroll={triggerScroll}
+  data-show-once={showOnce}
+  data-storage-key={storageKey}
+  hidden
+>
+  <div class="modal-backdrop"></div>
+  <div class="modal-content glass">
+    <button class="modal-close" aria-label="Fechar">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M18 6L6 18M6 6l12 12" />
+      </svg>
+    </button>
+    <slot />
+  </div>
+</div>
+
+<script>
+  function initModals() {
+    const modals = document.querySelectorAll('.modal-overlay');
+    modals.forEach(modalEl => {
+      const modal = modalEl as HTMLElement;
+      const triggerType = modal.dataset.triggerType;
+      const showOnce = modal.dataset.showOnce === 'true';
+      const storageKey = modal.dataset.storageKey || 'modal_shown';
+      const closeBtn = modal.querySelector('.modal-close');
+      const backdrop = modal.querySelector('.modal-backdrop');
+
+      // Check if already shown
+      if (showOnce && sessionStorage.getItem(storageKey)) return;
+
+      function openModal() {
+        modal.hidden = false;
+        requestAnimationFrame(() => {
+          modal.classList.add('modal-active');
+        });
+        if (showOnce) sessionStorage.setItem(storageKey, 'true');
+        document.body.style.overflow = 'hidden';
+
+        (window as any).dataLayer?.push({
+          event: 'modal_open',
+          modal_trigger: triggerType,
+        });
+      }
+
+      function closeModal() {
+        modal.classList.remove('modal-active');
+        setTimeout(() => {
+          modal.hidden = true;
+          document.body.style.overflow = '';
+        }, 300);
+      }
+
+      // Close handlers
+      closeBtn?.addEventListener('click', closeModal);
+      backdrop?.addEventListener('click', closeModal);
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !modal.hidden) closeModal();
+      });
+
+      // Trigger: click
+      if (triggerType === 'click' && modal.dataset.triggerId) {
+        const trigger = document.getElementById(modal.dataset.triggerId);
+        trigger?.addEventListener('click', (e) => {
+          e.preventDefault();
+          openModal();
+        });
+      }
+
+      // Trigger: timer
+      if (triggerType === 'timer') {
+        const delay = parseInt(modal.dataset.triggerDelay || '5000');
+        setTimeout(openModal, delay);
+      }
+
+      // Trigger: scroll
+      if (triggerType === 'scroll') {
+        const threshold = parseInt(modal.dataset.triggerScroll || '50');
+        let triggered = false;
+        window.addEventListener('scroll', () => {
+          if (triggered) return;
+          const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
+          const scrollPercent = Math.round((window.scrollY / scrollHeight) * 100);
+          if (scrollPercent >= threshold) {
+            triggered = true;
+            openModal();
+          }
+        });
+      }
+
+      // Trigger: exit-intent
+      if (triggerType === 'exit-intent') {
+        let triggered = false;
+        document.addEventListener('mouseout', (e) => {
+          if (triggered) return;
+          if (e.clientY <= 0) {
+            triggered = true;
+            openModal();
+          }
+        });
+      }
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initModals);
+  } else {
+    initModals();
+  }
+</script>
+
+<style>
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-lg);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .modal-overlay.modal-active {
+    opacity: 1;
+  }
+
+  .modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+  }
+
+  .modal-content {
+    position: relative;
+    max-width: 520px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: var(--space-2xl);
+    border-radius: var(--radius-xl);
+    transform: translateY(20px) scale(0.95);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .modal-active .modal-content {
+    transform: translateY(0) scale(1);
+  }
+
+  .modal-close {
+    position: absolute;
+    top: var(--space-md);
+    right: var(--space-md);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    background: var(--bg-card);
+    transition: all var(--transition-fast);
+    z-index: 1;
+  }
+
+  .modal-close:hover {
+    color: var(--text-primary);
+    background: var(--bg-elevated);
+  }
+
+  @media (max-width: 768px) {
+    .modal-content {
+      padding: var(--space-xl);
+      max-width: 100%;
+    }
+  }
+</style>

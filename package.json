@@ -1,0 +1,22 @@
+{
+  "name": "juqybeach",
+  "type": "module",
+  "version": "0.0.1",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "scaffold": "node scaffold-page.mjs",
+    "deploy": "npm run build && node deploy.mjs"
+  },
+  "dependencies": {
+    "astro": "^6.1.9",
+    "flatpickr": "^4.6.13",
+    "gsap": "^3.15.0",
+    "lenis": "^1.3.23"
+  }
+}

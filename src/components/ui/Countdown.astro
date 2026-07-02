@@ -1,0 +1,182 @@
+---
+// src/components/ui/Countdown.astro
+// Timer de contagem regressiva para urgência em campanhas
+// Suporta data fixa ou modo evergreen (baseado na sessão do usuário)
+//
+// Uso fixo: <Countdown targetDate="2026-05-15T23:59:59" />
+// Uso evergreen: <Countdown evergreenMinutes={30} />
+
+interface Props {
+  targetDate?: string;
+  evergreenMinutes?: number;
+  title?: string;
+  expiredText?: string;
+  class?: string;
+}
+
+const {
+  targetDate,
+  evergreenMinutes,
+  title,
+  expiredText = 'Oferta encerrada!',
+  class: className,
+} = Astro.props;
+---
+
+<div
+  class:list={['countdown', className]}
+  data-target-date={targetDate}
+  data-evergreen-minutes={evergreenMinutes}
+  data-expired-text={expiredText}
+>
+  {title && <p class="countdown-title">{title}</p>}
+  <div class="countdown-grid">
+    <div class="countdown-item">
+      <span class="countdown-number" data-unit="days">00</span>
+      <span class="countdown-label">Dias</span>
+    </div>
+    <span class="countdown-separator">:</span>
+    <div class="countdown-item">
+      <span class="countdown-number" data-unit="hours">00</span>
+      <span class="countdown-label">Horas</span>
+    </div>
+    <span class="countdown-separator">:</span>
+    <div class="countdown-item">
+      <span class="countdown-number" data-unit="minutes">00</span>
+      <span class="countdown-label">Min</span>
+    </div>
+    <span class="countdown-separator">:</span>
+    <div class="countdown-item">
+      <span class="countdown-number" data-unit="seconds">00</span>
+      <span class="countdown-label">Seg</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  function initCountdowns() {
+    const countdowns = document.querySelectorAll('.countdown');
+    countdowns.forEach(elRaw => {
+      const el = elRaw as HTMLElement;
+      let targetTime: number;
+
+      const fixedDate = el.dataset.targetDate;
+      const evergreenMin = el.dataset.evergreenMinutes;
+
+      if (fixedDate) {
+        targetTime = new Date(fixedDate).getTime();
+      } else if (evergreenMin) {
+        const storageKey = 'countdown_evergreen_end';
+        const stored = sessionStorage.getItem(storageKey);
+        if (stored) {
+          targetTime = parseInt(stored);
+        } else {
+          targetTime = Date.now() + parseInt(evergreenMin) * 60 * 1000;
+          sessionStorage.setItem(storageKey, targetTime.toString());
+        }
+      } else {
+        return;
+      }
+
+      const daysEl = el.querySelector('[data-unit="days"]') as HTMLElement;
+      const hoursEl = el.querySelector('[data-unit="hours"]') as HTMLElement;
+      const minutesEl = el.querySelector('[data-unit="minutes"]') as HTMLElement;
+      const secondsEl = el.querySelector('[data-unit="seconds"]') as HTMLElement;
+
+      function update() {
+        const now = Date.now();
+        const diff = Math.max(0, targetTime - now);
+
+        if (diff <= 0) {
+          el.innerHTML = `<p class="countdown-expired">${el.dataset.expiredText}</p>`;
+          return;
+        }
+
+        const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const s = Math.floor((diff % (1000 * 60)) / 1000);
+
+        if (daysEl) daysEl.textContent = d.toString().padStart(2, '0');
+        if (hoursEl) hoursEl.textContent = h.toString().padStart(2, '0');
+        if (minutesEl) minutesEl.textContent = m.toString().padStart(2, '0');
+        if (secondsEl) secondsEl.textContent = s.toString().padStart(2, '0');
+
+        requestAnimationFrame(() => setTimeout(update, 1000));
+      }
+
+      update();
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initCountdowns);
+  } else {
+    initCountdowns();
+  }
+</script>
+
+<style>
+  .countdown {
+    text-align: center;
+  }
+
+  .countdown-title {
+    font-size: 0.9rem;
+    color: var(--text-muted) !important;
+    margin-bottom: var(--space-md) !important;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .countdown-grid {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
+  .countdown-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    min-width: 64px;
+  }
+
+  .countdown-number {
+    font-size: 2.5rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+
+  .countdown-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 500;
+  }
+
+  .countdown-separator {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    padding-bottom: 20px;
+  }
+
+  .countdown-expired {
+    font-size: 1.1rem;
+    color: var(--color-secondary) !important;
+    font-weight: 600;
+  }
+
+  @media (max-width: 768px) {
+    .countdown-item { min-width: 48px; }
+    .countdown-number { font-size: 1.8rem; }
+    .countdown-separator { font-size: 1.5rem; }
+  }
+</style>

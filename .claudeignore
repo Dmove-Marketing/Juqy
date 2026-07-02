@@ -1,0 +1,9 @@
+# Arquivos que não devem ser indexados pelo Claude Code
+_html-originais/
+dist/
+.astro/
+node_modules/
+package-lock.json
+*.log
+.DS_Store
+Thumbs.db

@@ -1,0 +1,112 @@
+---
+// src/components/ui/StatsCounter.astro
+// Números animados com contagem automática ao entrar em viewport
+// Uso: <StatsCounter items={[{ value: 500, suffix: "+", label: "Clientes" }]} />
+
+interface Props {
+  items: Array<{
+    value: number;
+    prefix?: string;
+    suffix?: string;
+    label: string;
+  }>;
+  class?: string;
+}
+
+const {
+  items,
+  class: className,
+} = Astro.props;
+---
+
+<div class:list={['stats-counter', className]}>
+  {items.map((item) => (
+    <div class="stat-item" data-animate="fade-up">
+      <span class="stat-number gradient-text" data-count-to={item.value} data-prefix={item.prefix || ''} data-suffix={item.suffix || ''}>
+        {item.prefix || ''}{0}{item.suffix || ''}
+      </span>
+      <span class="stat-label">{item.label}</span>
+    </div>
+  ))}
+</div>
+
+<script>
+  function initCounters() {
+    const counters = document.querySelectorAll('[data-count-to]');
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+
+        const el = entry.target as HTMLElement;
+        const target = parseInt(el.dataset.countTo || '0');
+        const prefix = el.dataset.prefix || '';
+        const suffix = el.dataset.suffix || '';
+        const duration = 2000;
+        const startTime = performance.now();
+
+        function easeOutExpo(t: number): number {
+          return t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+        }
+
+        function animate(currentTime: number) {
+          const elapsed = currentTime - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          const easedProgress = easeOutExpo(progress);
+          const current = Math.round(easedProgress * target);
+
+          el.textContent = prefix + current.toLocaleString('pt-BR') + suffix;
+
+          if (progress < 1) {
+            requestAnimationFrame(animate);
+          }
+        }
+
+        requestAnimationFrame(animate);
+        observer.unobserve(el);
+      });
+    }, { threshold: 0.3 });
+
+    counters.forEach(el => observer.observe(el));
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initCounters);
+  } else {
+    initCounters();
+  }
+</script>
+
+<style>
+  .stats-counter {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: var(--space-xl);
+    text-align: center;
+  }
+
+  .stat-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .stat-number {
+    font-size: 3rem;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stat-label {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  @media (max-width: 768px) {
+    .stat-number { font-size: 2.2rem; }
+    .stats-counter { gap: var(--space-lg); }
+  }
+</style>

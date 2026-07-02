@@ -1,0 +1,71 @@
+---
+interface Props {
+  /** ID do vídeo no YouTube */
+  id: string;
+  title: string;
+  /** thumbnail personalizada (opcional); senão usa a do YouTube */
+  thumbnail?: string;
+  class?: string;
+}
+
+const { id, title, thumbnail, class: className } = Astro.props;
+
+const thumb = thumbnail ?? `https://i.ytimg.com/vi/${id}/maxresdefault.jpg`;
+const embedUrl = `https://www.youtube.com/embed/${id}?autoplay=1&rel=0`;
+---
+
+<div
+  class:list={['video-embed', className]}
+  data-embed-url={embedUrl}
+  style={`background-image: url('${thumb}')`}
+  role="button"
+  tabindex="0"
+  aria-label={`Reproduzir: ${title}`}
+>
+  <button type="button" class="video-embed__play" aria-label="Play">
+    <svg viewBox="0 0 68 48" width="68" height="48" aria-hidden="true">
+      <path d="M66.5 7.7a8.5 8.5 0 0 0-6-6C55.8.3 34 .3 34 .3S12.2.3 7.5 1.7a8.5 8.5 0 0 0-6 6C0 11.4 0 24 0 24s0 12.6 1.5 16.3a8.5 8.5 0 0 0 6 6C12.2 47.7 34 47.7 34 47.7s21.8 0 26.5-1.4a8.5 8.5 0 0 0 6-6C68 36.6 68 24 68 24s0-12.6-1.5-16.3z" fill="red"/>
+      <path d="M45 24 27 14v20z" fill="#fff"/>
+    </svg>
+  </button>
+</div>
+
+<script>
+  document.querySelectorAll<HTMLElement>('.video-embed').forEach((el) => {
+    const activate = () => {
+      const url = el.dataset.embedUrl!;
+      const iframe = document.createElement('iframe');
+      iframe.src = url;
+      iframe.allow = 'autoplay; encrypted-media; picture-in-picture';
+      iframe.allowFullscreen = true;
+      iframe.loading = 'lazy';
+      iframe.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:0';
+      el.innerHTML = '';
+      el.appendChild(iframe);
+    };
+    el.addEventListener('click', activate);
+    el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') activate(); });
+  });
+</script>
+
+<style>
+  .video-embed {
+    position: relative;
+    padding-bottom: 56.25%; /* 16:9 */
+    background: #000 center/cover no-repeat;
+    cursor: pointer;
+    overflow: hidden;
+  }
+  .video-embed__play {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 68px;
+    height: 48px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: transform .15s;
+  }
+  .video-embed:hover .video-embed__play { transform: scale(1.1); }
+</style>

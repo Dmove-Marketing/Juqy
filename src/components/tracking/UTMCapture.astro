@@ -1,0 +1,75 @@
+---
+// src/components/tracking/UTMCapture.astro
+// Captura UTMs, click IDs e referrer — salva em sessionStorage e cookie (90 dias)
+// Cookie permite atribuição entre sessões; sessionStorage é o dado ativo
+---
+
+<script>
+  (function() {
+    const params = new URLSearchParams(window.location.search);
+
+    const utmKeys     = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
+    const clickIdKeys = ['gclid', 'fbclid', 'sck', 'ttclid', 'msclkid'];
+
+    function setCookie(name: string, value: string, days: number) {
+      const d = new Date();
+      d.setTime(d.getTime() + days * 24 * 60 * 60 * 1000);
+      document.cookie = `${name}=${encodeURIComponent(value)};expires=${d.toUTCString()};path=/;SameSite=Lax`;
+    }
+
+    function getCookie(name: string): string | null {
+      const m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+      return m ? decodeURIComponent(m[1]) : null;
+    }
+
+    const trackingData: Record<string, string> = {};
+
+    utmKeys.forEach(k     => { const v = params.get(k); if (v) trackingData[k] = v; });
+    clickIdKeys.forEach(k => { const v = params.get(k); if (v) trackingData[k] = v; });
+
+    if (document.referrer && !document.referrer.includes(window.location.hostname)) {
+      trackingData['referrer'] = document.referrer;
+    }
+
+    trackingData['landing_page'] = window.location.pathname;
+    trackingData['landing_url']  = window.location.href.split('?')[0];
+
+    if (!sessionStorage.getItem('dmove_first_visit')) {
+      sessionStorage.setItem('dmove_first_visit', new Date().toISOString());
+    }
+
+    const hasNewParams = utmKeys.some(k => trackingData[k]) || clickIdKeys.some(k => trackingData[k]);
+
+    if (hasNewParams) {
+      // UTMs na URL: salva em sessão e renova cookie de 90 dias
+      sessionStorage.setItem('dmove_tracking', JSON.stringify(trackingData));
+      setCookie('dmove_utm', JSON.stringify(trackingData), 90);
+    } else {
+      // Sem UTMs na URL: lê cookie para atribuição entre sessões
+      const existing = sessionStorage.getItem('dmove_tracking');
+      if (!existing) {
+        const cookieVal = getCookie('dmove_utm');
+        if (cookieVal) {
+          try {
+            const cookieData = JSON.parse(cookieVal) as Record<string, string>;
+            sessionStorage.setItem('dmove_tracking', JSON.stringify({
+              ...cookieData,
+              landing_page: trackingData.landing_page,
+              landing_url:  trackingData.landing_url,
+            }));
+          } catch {}
+        } else {
+          // Nenhuma UTM disponível: salva apenas dados de navegação
+          sessionStorage.setItem('dmove_tracking', JSON.stringify(trackingData));
+        }
+      }
+    }
+
+    (window as any).dataLayer = (window as any).dataLayer || [];
+    (window as any).dataLayer.push({
+      event: 'page_meta',
+      page_path: window.location.pathname,
+      ...trackingData,
+    });
+  })();
+</script>

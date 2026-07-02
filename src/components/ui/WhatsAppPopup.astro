@@ -1,0 +1,725 @@
+---
+// src/components/ui/WhatsAppPopup.astro
+// Botão flutuante com popup de formulário pré-WhatsApp em 2 etapas
+// Uso: incluído automaticamente pelo Base.astro via config.json
+// Personalize por página passando formId diferente (ex: "whats-casamentos")
+
+interface Props {
+  phone: string;          // DDI + DDD + número, só dígitos: 5511999999999
+  formId?: string;        // ID para rastreamento no n8n (ex: "whats-casamentos")
+  submitUrl?: string;     // Webhook n8n — envia em background antes de abrir o WhatsApp
+  showAfterMs?: number;   // Delay para aparecer o botão (ms)
+  position?: 'bottom-right' | 'bottom-left';
+}
+
+const {
+  phone,
+  formId      = 'whats-popup',
+  submitUrl   = '',
+  showAfterMs = 3000,
+  position    = 'bottom-right',
+} = Astro.props;
+
+const cleanPhone = phone.replace(/\D/g, '');
+---
+
+<div
+  id="wap-root"
+  class:list={['wap-root', `wap-${position}`]}
+  data-show-after={showAfterMs}
+  data-phone={cleanPhone}
+  data-form-id={formId}
+  data-submit-url={submitUrl}
+>
+  <!-- Popup card -->
+  <div id="wap-card" class="wap-card" aria-hidden="true">
+    <!-- Header -->
+    <div class="wap-header">
+      <div class="wap-header-left">
+        <div class="wap-header-avatar">
+          <svg viewBox="0 0 32 32" fill="currentColor" aria-hidden="true">
+            <path d="M16.004 2.667A13.28 13.28 0 002.667 15.907a13.18 13.18 0 001.794 6.64L2.667 29.333l7.03-1.842a13.28 13.28 0 006.307 1.604h.005A13.28 13.28 0 0029.333 15.92 13.28 13.28 0 0016.004 2.667zm0 24.32a11.04 11.04 0 01-5.626-1.54l-.404-.24-4.186 1.098 1.116-4.08-.264-.42a11.01 11.01 0 01-1.69-5.898A11.05 11.05 0 0116.004 4.902 11.05 11.05 0 0127.1 15.92a11.05 11.05 0 01-11.096 11.067zm6.073-8.287c-.333-.167-1.972-.973-2.278-1.084-.306-.111-.53-.167-.752.167-.223.333-.862 1.084-1.057 1.306-.195.223-.39.25-.723.083-.333-.167-1.406-.518-2.678-1.652-.99-.882-1.658-1.972-1.852-2.305-.195-.333-.021-.514.146-.68.15-.15.333-.39.5-.584.167-.195.222-.334.333-.556.111-.223.056-.417-.028-.584-.083-.167-.751-1.812-1.03-2.48-.27-.65-.546-.562-.751-.573-.195-.01-.417-.012-.64-.012a1.228 1.228 0 00-.89.417c-.305.334-1.168 1.14-1.168 2.779 0 1.64 1.196 3.224 1.363 3.446.167.223 2.352 3.593 5.7 5.038.796.344 1.418.55 1.903.704.8.254 1.527.218 2.102.132.641-.096 1.972-.806 2.25-1.584.278-.779.278-1.446.195-1.585-.083-.139-.306-.223-.64-.39z"/>
+          </svg>
+        </div>
+        <div class="wap-header-info">
+          <strong>Fale pelo WhatsApp</strong>
+          <span>
+            <span class="wap-status-dot"></span>
+            Online agora
+          </span>
+        </div>
+      </div>
+      <button class="wap-close-btn" id="wap-close" type="button" aria-label="Fechar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Form body -->
+    <div class="wap-body">
+      <form class="wap-form" id={`wap-form-${formId}`} novalidate>
+        <!-- Honeypot -->
+        <div class="hp-field" aria-hidden="true">
+          <input type="text" name="website" tabindex="-1" autocomplete="off" />
+        </div>
+
+        <!-- Step 1 -->
+        <div class="wap-step" id="wap-step-1">
+          <p class="wap-step-hint">Passo 1 de 2 — Dados de contato</p>
+          <div class="wap-field">
+            <input
+              class="wap-input"
+              type="text"
+              name="Nome"
+              placeholder="Seu nome *"
+              autocomplete="name"
+            />
+            <span class="wap-field-error" id="wap-err-nome"></span>
+          </div>
+          <div class="wap-field">
+            <input
+              class="wap-input"
+              type="tel"
+              name="WhatsApp"
+              placeholder="WhatsApp *"
+              autocomplete="tel"
+              data-mask="phone"
+            />
+            <span class="wap-field-error" id="wap-err-whats"></span>
+          </div>
+          <button type="button" class="wap-btn" id="wap-next">
+            Próximo
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="wap-step wap-step-hidden" id="wap-step-2">
+          <button type="button" class="wap-back-btn" id="wap-back">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
+            Voltar
+          </button>
+          <p class="wap-step-hint">Passo 2 de 2 — Detalhes do evento</p>
+          <div class="wap-field">
+            <select class="wap-select" name="Tipo de evento">
+              <option value="" disabled selected>Tipo de evento *</option>
+              <option>Aniversário</option>
+              <option>Aniversário debutante</option>
+              <option>Bodas</option>
+              <option>Casamento</option>
+              <option>Confraternização corporativa</option>
+              <option>Confraternização social</option>
+              <option>Corporativo</option>
+              <option>Feiras e Exposições</option>
+              <option>Formatura</option>
+              <option>Happy Hours</option>
+              <option>Masterclass e Palestras</option>
+              <option>Mentorias e Treinamentos</option>
+              <option>Offsite corporativo</option>
+              <option>Reuniões de Networking</option>
+              <option>Shows e Festivais</option>
+              <option>Workshops, Conferências e Seminários</option>
+              <option>Outros</option>
+            </select>
+            <span class="wap-field-error" id="wap-err-tipo"></span>
+          </div>
+          <div class="wap-field">
+            <input
+              class="wap-input"
+              type="text"
+              name="Data do evento"
+              id="wap-data-input"
+              placeholder="Data do evento *"
+              readonly
+              autocomplete="off"
+            />
+            <span class="wap-field-error" id="wap-err-data"></span>
+          </div>
+          <div class="wap-field">
+            <input
+              class="wap-input"
+              type="number"
+              name="Convidados"
+              placeholder="Nº de convidados *"
+              min="1"
+            />
+            <span class="wap-field-error" id="wap-err-conv"></span>
+          </div>
+          <button type="submit" class="wap-btn wap-btn-submit">
+            <span class="wap-btn-text">
+              Enviar pelo WhatsApp
+              <svg viewBox="0 0 32 32" fill="currentColor" aria-hidden="true">
+                <path d="M16.004 2.667A13.28 13.28 0 002.667 15.907a13.18 13.18 0 001.794 6.64L2.667 29.333l7.03-1.842a13.28 13.28 0 006.307 1.604h.005A13.28 13.28 0 0029.333 15.92 13.28 13.28 0 0016.004 2.667zm0 24.32a11.04 11.04 0 01-5.626-1.54l-.404-.24-4.186 1.098 1.116-4.08-.264-.42a11.01 11.01 0 01-1.69-5.898A11.05 11.05 0 0116.004 4.902 11.05 11.05 0 0127.1 15.92a11.05 11.05 0 01-11.096 11.067zm6.073-8.287c-.333-.167-1.972-.973-2.278-1.084-.306-.111-.53-.167-.752.167-.223.333-.862 1.084-1.057 1.306-.195.223-.39.25-.723.083-.333-.167-1.406-.518-2.678-1.652-.99-.882-1.658-1.972-1.852-2.305-.195-.333-.021-.514.146-.68.15-.15.333-.39.5-.584.167-.195.222-.334.333-.556.111-.223.056-.417-.028-.584-.083-.167-.751-1.812-1.03-2.48-.27-.65-.546-.562-.751-.573-.195-.01-.417-.012-.64-.012a1.228 1.228 0 00-.89.417c-.305.334-1.168 1.14-1.168 2.779 0 1.64 1.196 3.224 1.363 3.446.167.223 2.352 3.593 5.7 5.038.796.344 1.418.55 1.903.704.8.254 1.527.218 2.102.132.641-.096 1.972-.806 2.25-1.584.278-.779.278-1.446.195-1.585-.083-.139-.306-.223-.64-.39z"/>
+              </svg>
+            </span>
+            <span class="wap-btn-loading" style="display:none">Enviando...</span>
+          </button>
+        </div>
+
+        <!-- Success -->
+        <div class="wap-success wap-step-hidden" id="wap-success">
+          <div class="wap-success-icon">✓</div>
+          <p><strong>Mensagem enviada!</strong><br>Abrindo o WhatsApp…</p>
+        </div>
+      </form>
+    </div>
+
+    <!-- Footer note -->
+    <p class="wap-footer">Resposta em até alguns minutos</p>
+  </div>
+
+  <!-- Toggle button -->
+  <button
+    class="wap-toggle"
+    id="wap-toggle"
+    type="button"
+    aria-label="Abrir chat no WhatsApp"
+    aria-expanded="false"
+    aria-controls="wap-card"
+  >
+    <svg class="wap-icon-wa" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true">
+      <path d="M16.004 2.667A13.28 13.28 0 002.667 15.907a13.18 13.18 0 001.794 6.64L2.667 29.333l7.03-1.842a13.28 13.28 0 006.307 1.604h.005A13.28 13.28 0 0029.333 15.92 13.28 13.28 0 0016.004 2.667zm0 24.32a11.04 11.04 0 01-5.626-1.54l-.404-.24-4.186 1.098 1.116-4.08-.264-.42a11.01 11.01 0 01-1.69-5.898A11.05 11.05 0 0116.004 4.902 11.05 11.05 0 0127.1 15.92a11.05 11.05 0 01-11.096 11.067zm6.073-8.287c-.333-.167-1.972-.973-2.278-1.084-.306-.111-.53-.167-.752.167-.223.333-.862 1.084-1.057 1.306-.195.223-.39.25-.723.083-.333-.167-1.406-.518-2.678-1.652-.99-.882-1.658-1.972-1.852-2.305-.195-.333-.021-.514.146-.68.15-.15.333-.39.5-.584.167-.195.222-.334.333-.556.111-.223.056-.417-.028-.584-.083-.167-.751-1.812-1.03-2.48-.27-.65-.546-.562-.751-.573-.195-.01-.417-.012-.64-.012a1.228 1.228 0 00-.89.417c-.305.334-1.168 1.14-1.168 2.779 0 1.64 1.196 3.224 1.363 3.446.167.223 2.352 3.593 5.7 5.038.796.344 1.418.55 1.903.704.8.254 1.527.218 2.102.132.641-.096 1.972-.806 2.25-1.584.278-.779.278-1.446.195-1.585-.083-.139-.306-.223-.64-.39z"/>
+    </svg>
+    <svg class="wap-icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:none" aria-hidden="true">
+      <line x1="18" y1="6" x2="6" y2="18"/>
+      <line x1="6" y1="6" x2="18" y2="18"/>
+    </svg>
+    <span class="wap-pulse" aria-hidden="true"></span>
+  </button>
+</div>
+
+<script>
+  import flatpickr from 'flatpickr';
+  import { Portuguese } from 'flatpickr/dist/l10n/pt.js';
+  import 'flatpickr/dist/flatpickr.min.css';
+
+  flatpickr.localize(Portuguese);
+
+  function buildFonte(tracking: Record<string, string>): string {
+    if (tracking.utm_source) {
+      let f = tracking.utm_source;
+      if (tracking.utm_medium) f += ` / ${tracking.utm_medium}`;
+      return f;
+    }
+    return tracking.landing_page || window.location.pathname;
+  }
+
+  function applyPhoneMask(input: HTMLInputElement) {
+    input.addEventListener('input', () => {
+      let v = input.value.replace(/\D/g, '').slice(0, 11);
+      if (v.length > 10)     v = v.replace(/^(\d{2})(\d{5})(\d{4}).*/, '($1) $2-$3');
+      else if (v.length > 6) v = v.replace(/^(\d{2})(\d{4})(\d*)/, '($1) $2-$3');
+      else if (v.length > 2) v = v.replace(/^(\d{2})(\d*)/, '($1) $2');
+      else if (v.length > 0) v = v.replace(/^(\d*)/, '($1');
+      input.value = v;
+    });
+  }
+
+  function showError(el: HTMLElement | null, msg: string) {
+    if (!el) return;
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  function clearError(el: HTMLElement | null) {
+    if (!el) return;
+    el.textContent = '';
+    el.style.display = 'none';
+  }
+
+  function initWapPopup() {
+    const root = document.getElementById('wap-root') as HTMLElement | null;
+    if (!root) return;
+
+    const phone     = root.dataset.phone || '';
+    const formId    = root.dataset.formId || 'whats-popup';
+    const submitUrl = root.dataset.submitUrl || '';
+    const delay     = parseInt(root.dataset.showAfter || '3000');
+
+    const toggle   = document.getElementById('wap-toggle') as HTMLButtonElement;
+    const card     = document.getElementById('wap-card') as HTMLElement;
+    const closeBtn = document.getElementById('wap-close') as HTMLButtonElement;
+    const nextBtn  = document.getElementById('wap-next') as HTMLButtonElement;
+    const backBtn  = document.getElementById('wap-back') as HTMLButtonElement;
+    const step1    = document.getElementById('wap-step-1') as HTMLElement;
+    const step2    = document.getElementById('wap-step-2') as HTMLElement;
+    const success  = document.getElementById('wap-success') as HTMLElement;
+    const form     = document.getElementById(`wap-form-${formId}`) as HTMLFormElement;
+    const iconWa   = toggle.querySelector<HTMLElement>('.wap-icon-wa');
+    const iconX    = toggle.querySelector<HTMLElement>('.wap-icon-close');
+
+    // Show button after delay
+    setTimeout(() => { root.classList.add('wap-visible'); }, delay);
+
+    let datepickerInit = false;
+
+    function openCard() {
+      card.classList.add('wap-card-open');
+      card.setAttribute('aria-hidden', 'false');
+      toggle.setAttribute('aria-expanded', 'true');
+      if (iconWa) iconWa.style.display = 'none';
+      if (iconX)  iconX.style.display  = 'block';
+    }
+
+    function closeCard() {
+      card.classList.remove('wap-card-open');
+      card.setAttribute('aria-hidden', 'true');
+      toggle.setAttribute('aria-expanded', 'false');
+      if (iconWa) iconWa.style.display = 'block';
+      if (iconX)  iconX.style.display  = 'none';
+    }
+
+    toggle.addEventListener('click', () => {
+      card.classList.contains('wap-card-open') ? closeCard() : openCard();
+    });
+
+    closeBtn.addEventListener('click', closeCard);
+
+    // Apply phone mask
+    const phoneInput = form.querySelector<HTMLInputElement>('[name="WhatsApp"]');
+    if (phoneInput) applyPhoneMask(phoneInput);
+
+    // Step navigation
+    nextBtn.addEventListener('click', () => {
+      const nome  = form.querySelector<HTMLInputElement>('[name="Nome"]');
+      const whats = form.querySelector<HTMLInputElement>('[name="WhatsApp"]');
+      let ok = true;
+
+      clearError(document.getElementById('wap-err-nome'));
+      clearError(document.getElementById('wap-err-whats'));
+
+      if (!nome?.value.trim()) {
+        showError(document.getElementById('wap-err-nome'), 'Informe seu nome');
+        ok = false;
+      }
+      if (!whats?.value.trim() || whats.value.replace(/\D/g, '').length < 10) {
+        showError(document.getElementById('wap-err-whats'), 'Informe um WhatsApp válido');
+        ok = false;
+      }
+      if (!ok) return;
+
+      step1.classList.add('wap-step-hidden');
+      step2.classList.remove('wap-step-hidden');
+
+      // Init Flatpickr on step 2 date input
+      if (!datepickerInit) {
+        datepickerInit = true;
+        const dateInput = document.getElementById('wap-data-input') as HTMLInputElement;
+        if (dateInput && !(dateInput as any)._flatpickr) {
+          flatpickr(dateInput, { dateFormat: 'd/m/Y', minDate: 'today', disableMobile: false });
+        }
+      }
+    });
+
+    backBtn.addEventListener('click', () => {
+      step2.classList.add('wap-step-hidden');
+      step1.classList.remove('wap-step-hidden');
+    });
+
+    // Form submit
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const hp = form.querySelector<HTMLInputElement>('[name="website"]');
+      if (hp && hp.value) return;
+
+      const tipo  = form.querySelector<HTMLSelectElement>('[name="Tipo de evento"]');
+      const data  = form.querySelector<HTMLInputElement>('[name="Data do evento"]');
+      const conv  = form.querySelector<HTMLInputElement>('[name="Convidados"]');
+      let ok = true;
+
+      clearError(document.getElementById('wap-err-tipo'));
+      clearError(document.getElementById('wap-err-data'));
+      clearError(document.getElementById('wap-err-conv'));
+
+      if (!tipo?.value)         { showError(document.getElementById('wap-err-tipo'), 'Selecione o tipo de evento'); ok = false; }
+      if (!data?.value?.trim()) { showError(document.getElementById('wap-err-data'), 'Informe a data do evento');   ok = false; }
+      if (!conv?.value || parseInt(conv.value) < 1) { showError(document.getElementById('wap-err-conv'), 'Informe o número de convidados'); ok = false; }
+      if (!ok) return;
+
+      const submitBtn = form.querySelector<HTMLButtonElement>('[type="submit"]');
+      const btnText   = submitBtn?.querySelector<HTMLElement>('.wap-btn-text');
+      const btnLoad   = submitBtn?.querySelector<HTMLElement>('.wap-btn-loading');
+      if (submitBtn) submitBtn.disabled = true;
+      if (btnText && btnLoad) { btnText.style.display = 'none'; btnLoad.style.display = 'block'; }
+
+      const nome   = (form.querySelector<HTMLInputElement>('[name="Nome"]')?.value || '').trim();
+      const whatsV = (form.querySelector<HTMLInputElement>('[name="WhatsApp"]')?.value || '').trim();
+      const tipoV  = tipo?.value || '';
+      const dataV  = data?.value || '';
+      const convV  = conv?.value || '';
+
+      // Build WhatsApp message
+      const msg = `Olá! Me chamo ${nome}. Tenho interesse em ${tipoV} para ${convV} convidados na data ${dataV}.`;
+      const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+
+      // Build payload for n8n
+      const trackingRaw = sessionStorage.getItem('dmove_tracking');
+      const tracking    = trackingRaw ? JSON.parse(trackingRaw) : {};
+      const now = new Date();
+      const payload: Record<string, string> = {
+        'Nome':          nome,
+        'WhatsApp':      whatsV,
+        'Tipo de evento': tipoV,
+        'Data do evento': dataV,
+        'Convidados':    convV,
+        'Fonte':         buildFonte(tracking),
+        'Data':          now.toLocaleDateString('pt-BR'),
+        'Horário':       now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false }),
+        'URL da página': window.location.href,
+        'Agente de usuário': navigator.userAgent,
+        'form_id':   formId,
+        'form_name': formId,
+      };
+
+      // Fire and forget to n8n
+      if (submitUrl) {
+        fetch(submitUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        }).catch(() => {});
+      }
+
+      (window as any).dataLayer?.push({ event: 'form_submit', form_id: formId, ...payload });
+
+      // Show success, then open WhatsApp
+      step2.classList.add('wap-step-hidden');
+      success.classList.remove('wap-step-hidden');
+      setTimeout(() => { window.open(waUrl, '_blank'); }, 800);
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initWapPopup);
+  } else {
+    initWapPopup();
+  }
+</script>
+
+<style>
+  /* Root wrapper */
+  .wap-root {
+    position: fixed;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 12px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+  }
+
+  .wap-root.wap-visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .wap-bottom-right { bottom: 24px; right: 24px; }
+  .wap-bottom-left  { bottom: 24px; left: 24px; align-items: flex-start; }
+
+  /* Toggle button */
+  .wap-toggle {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: #25D366;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 20px rgba(37, 211, 102, 0.45);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s;
+    flex-shrink: 0;
+  }
+
+  .wap-toggle:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 28px rgba(37, 211, 102, 0.6);
+  }
+
+  .wap-icon-wa,
+  .wap-icon-close {
+    width: 32px;
+    height: 32px;
+    transition: transform 0.25s ease;
+  }
+
+  .wap-pulse {
+    position: absolute;
+    inset: -5px;
+    border-radius: 50%;
+    background: rgba(37, 211, 102, 0.3);
+    animation: wap-pulse 2.2s ease-in-out infinite;
+    z-index: -1;
+  }
+
+  @keyframes wap-pulse {
+    0%, 100% { transform: scale(1);    opacity: 0.5; }
+    50%       { transform: scale(1.18); opacity: 0;   }
+  }
+
+  /* Card */
+  .wap-card {
+    width: 320px;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.18);
+    overflow: hidden;
+    transform: scale(0.92) translateY(12px);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+    transform-origin: bottom right;
+  }
+
+  .wap-bottom-left .wap-card {
+    transform-origin: bottom left;
+  }
+
+  .wap-card.wap-card-open {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* Header */
+  .wap-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: #25D366;
+    color: #fff;
+  }
+
+  .wap-header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .wap-header-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .wap-header-avatar svg { width: 22px; height: 22px; }
+
+  .wap-header-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .wap-header-info strong {
+    font-size: 0.9rem;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+
+  .wap-header-info span {
+    font-size: 0.75rem;
+    opacity: 0.9;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .wap-status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #fff;
+    flex-shrink: 0;
+  }
+
+  .wap-close-btn {
+    background: none;
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    padding: 4px;
+    opacity: 0.8;
+    transition: opacity 0.15s;
+    display: flex;
+    align-items: center;
+  }
+
+  .wap-close-btn:hover { opacity: 1; }
+  .wap-close-btn svg { width: 18px; height: 18px; }
+
+  /* Body */
+  .wap-body {
+    padding: 16px;
+    background: #f0f0f0;
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d4d4d4' fill-opacity='0.3'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  }
+
+  .wap-form {
+    background: #fff;
+    border-radius: 10px;
+    padding: 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+
+  /* Steps */
+  .wap-step { display: flex; flex-direction: column; gap: 10px; }
+  .wap-step-hidden { display: none !important; }
+
+  .wap-step-hint {
+    font-size: 0.72rem;
+    color: #888;
+    margin: 0;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .wap-field {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .wap-input,
+  .wap-select {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    background: #fafafa;
+    color: #111;
+    outline: none;
+    transition: border-color 0.15s;
+    box-sizing: border-box;
+  }
+
+  .wap-input:focus,
+  .wap-select:focus {
+    border-color: #25D366;
+    background: #fff;
+  }
+
+  .wap-field-error {
+    font-size: 0.72rem;
+    color: #ef4444;
+    display: none;
+  }
+
+  /* Buttons */
+  .wap-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: none;
+    background: #25D366;
+    color: #fff;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.15s;
+  }
+
+  .wap-btn:hover    { background: #1fb856; }
+  .wap-btn:active   { transform: scale(0.98); }
+
+  .wap-btn svg { width: 16px; height: 16px; }
+
+  .wap-btn-submit svg { width: 18px; height: 18px; }
+
+  .wap-back-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: none;
+    border: none;
+    color: #25D366;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .wap-back-btn svg { width: 14px; height: 14px; }
+
+  .wap-btn-loading { font-size: 0.85rem; }
+
+  /* Success */
+  .wap-success {
+    text-align: center;
+    padding: 16px 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .wap-success-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #25D366;
+    color: #fff;
+    font-size: 1.4rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .wap-success p {
+    font-size: 0.85rem;
+    color: #333;
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  /* Footer */
+  .wap-footer {
+    padding: 8px 16px 10px;
+    font-size: 0.7rem;
+    color: #aaa;
+    text-align: center;
+    background: #fff;
+    margin: 0;
+    border-top: 1px solid #f0f0f0;
+  }
+
+  /* Honeypot */
+  .hp-field {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  @media (max-width: 400px) {
+    .wap-card { width: calc(100vw - 32px); }
+    .wap-bottom-right { right: 16px; bottom: 16px; }
+    .wap-bottom-left  { left: 16px;  bottom: 16px; }
+  }
+</style>
