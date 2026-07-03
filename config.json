@@ -2,10 +2,10 @@
   "project_name": "juqybeach",
   "project_slug": "juqybeach",
   "client": "Juqy Beach",
-  "environment": "development",
+  "environment": "production",
   "tracking": {
-    "gtm_id": "",
-    "enabled": false
+    "gtm_id": "GTM-M9RQTXZ7",
+    "enabled": true
   },
   "forms": {
     "lead-form": {
