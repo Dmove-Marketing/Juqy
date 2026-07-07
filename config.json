@@ -12,7 +12,7 @@
       "id": "lead-form",
       "redirect_on_success": "",
       "webhooks": [
-        "https://server3n8n.dmove.com.br/webhook/juqybeach"
+        "https://server3n8n.dmove.com.br/webhook/juqy-beach"
       ],
       "fields_required": [
         "Nome",

@@ -1,10 +1,30 @@
+const PAGE_LABELS: Record<string, string> = {
+  '/':                     'casamentos',
+  '/casamentos':           'casamentos',
+  '/eventos-corporativos': 'eventos-corporativos',
+  '/debutantes':           'debutantes',
+  '/aniversarios':         'aniversarios',
+  '/bio':                  'bio',
+};
+
 function buildFonte(tracking: Record<string, string>): string {
-  if (tracking.utm_source) {
-    let f = tracking.utm_source;
-    if (tracking.utm_medium) f += ` / ${tracking.utm_medium}`;
-    return f;
-  }
-  return tracking.landing_page || window.location.pathname;
+  const rawPath = (tracking.landing_page || window.location.pathname).replace(/\/$/, '') || '/';
+  const slug = PAGE_LABELS[rawPath] ?? (rawPath.replace(/^\//, '') || 'casamentos');
+  const base = `Landing page/${slug}`;
+
+  const paramKeys = [
+    'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term',
+    'gclid', 'gbraid', 'wbraid',
+    'fbclid', 'fbc', 'fbp',
+    'ttclid', 'msclkid', 'sck',
+    'external_id', 'event_id',
+  ];
+
+  const params = new URLSearchParams();
+  paramKeys.forEach(k => { if (tracking[k]) params.set(k, tracking[k]); });
+
+  const qs = params.toString();
+  return qs ? `${base}?${qs}` : base;
 }
 
 export function initForms() {
@@ -65,7 +85,7 @@ export function initForms() {
       const dateFmt = now.toLocaleDateString('pt-BR');
       const timeFmt = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false });
 
-      const payload: Record<string, string> = {
+      const payload: Record<string, any> = {
         ...data,
         'Fonte': buildFonte(tracking),
         'Data': dateFmt,
@@ -74,6 +94,12 @@ export function initForms() {
         'Agente de usuário': navigator.userAgent,
         'form_id': formId,
         'form_name': formId,
+        'tracking': {
+          ...tracking,
+          submitted_at: new Date().toISOString(),
+          page_url: window.location.href,
+          first_visit: sessionStorage.getItem('dmove_first_visit') || undefined,
+        },
       };
 
       try {
