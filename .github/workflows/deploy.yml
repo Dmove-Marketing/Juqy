@@ -23,7 +23,11 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          DOMAIN=$(node -e "const c=require('./config.json'); console.log(c.deploy.remote_path.split('/').pop())")
+          DOMAIN=$(node -e "const c=require('./config.json'); console.log(c.deploy.remote_path.replace(/\/+$/, '').split('/').pop())")
+          if [ -z "$DOMAIN" ] || [ "$DOMAIN" = "www" ]; then
+            echo "Deploy abortado: domínio inválido em deploy.remote_path ('$DOMAIN')"
+            exit 1
+          fi
           echo "Deploying to /var/www/$DOMAIN"
           rsync -avz --delete \
             -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
