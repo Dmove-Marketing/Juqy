@@ -7,6 +7,27 @@ const PAGE_LABELS: Record<string, string> = {
   '/bio':                  'bio',
 };
 
+const VALID_DDDS = new Set([
+  11,12,13,14,15,16,17,18,19, 21,22,24,27,28, 31,32,33,34,35,37,38,
+  41,42,43,44,45,46,47,48,49, 51,53,54,55, 61,62,63,64,65,66,67,68,69,
+  71,73,74,75,77,79, 81,82,83,84,85,86,87,88,89, 91,92,93,94,95,96,97,98,99,
+]);
+
+/** Remove o código do país (55) quando o número vem com 12–13 dígitos; limita a 11 dígitos. */
+export function normalizeBrDigits(raw: string): string {
+  let d = raw.replace(/\D/g, '');
+  if (d.length > 11 && d.startsWith('55')) d = d.slice(2);
+  return d.slice(0, 11);
+}
+
+/** DDD válido + 9 dígitos iniciados em 9 (celular) ou 8 dígitos iniciados em 2–5 (fixo). */
+export function isValidBrPhone(raw: string): boolean {
+  const d = normalizeBrDigits(raw);
+  if (d.length < 10 || !VALID_DDDS.has(Number(d.slice(0, 2)))) return false;
+  const first = d[2];
+  return d.length === 11 ? first === '9' : /[2-5]/.test(first);
+}
+
 function buildFonte(tracking: Record<string, string>): string {
   const rawPath = (tracking.landing_page || window.location.pathname).replace(/\/$/, '') || '/';
   const slug = PAGE_LABELS[rawPath] ?? (rawPath.replace(/^\//, '') || 'casamentos');
@@ -58,7 +79,28 @@ export function initForms() {
       if (hp && hp.value) return;
 
       const submitBtn  = form.querySelector<HTMLButtonElement>('.form-submit, [type="submit"]');
-      const btnText    = submitBtn?.querySelector<HTMLElement>('.btn-text');
+
+      // Valida o WhatsApp: DDD brasileiro válido (e não o código do país "55" no lugar do DDD)
+      const waInput = form.querySelector<HTMLInputElement>('[name="WhatsApp"]');
+      if (waInput && !isValidBrPhone(waInput.value)) {
+        waInput.setCustomValidity('WhatsApp inválido');
+        waInput.focus();
+        waInput.style.outline = '2px solid #dc2626';
+        waInput.setAttribute('aria-invalid', 'true');
+        const warn = 'Informe um WhatsApp válido com DDD, ex.: (11) 91234-5678.';
+        const el = gridId
+          ? document.getElementById(gridId)?.querySelector('[id$="FormMsg"]') as HTMLElement | null
+          : form.querySelector('.form-error') as HTMLElement | null;
+        if (el) { el.innerHTML = warn; el.style.display = 'block'; } else { alert(warn); }
+        waInput.addEventListener('input', () => {
+          waInput.setCustomValidity('');
+          waInput.style.outline = '';
+          waInput.removeAttribute('aria-invalid');
+        }, { once: true });
+        return;
+      }
+
+      const btnText   = submitBtn?.querySelector<HTMLElement>('.btn-text');
       const btnLoading = submitBtn?.querySelector<HTMLElement>('.btn-loading');
       const msgEl = gridId
         ? document.getElementById(gridId)?.querySelector('[id$="FormMsg"]') as HTMLElement | null
