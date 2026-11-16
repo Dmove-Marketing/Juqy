@@ -51,6 +51,10 @@ function buildFonte(tracking: Record<string, string>): string {
 export function initForms() {
   const forms = document.querySelectorAll<HTMLFormElement>('form[data-form-id]');
   forms.forEach((form) => {
+    // Evita listeners duplicados (o módulo se auto-inicializa e as páginas também chamam initForms)
+    if (form.dataset.formsInit === '1') return;
+    form.dataset.formsInit = '1';
+
     let started = false;
     const formId    = form.dataset.formId!;
     const project   = form.dataset.project || window.location.hostname;
